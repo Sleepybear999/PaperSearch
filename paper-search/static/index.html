@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NITJ Paper Search</title>
+<meta name="description" content="Search mid-sem and end-sem question papers from NIT Jalandhar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #eef2f7;
+  --rule: rgba(30, 50, 90, .07);
+  --ink: #15233f;
+  --ink-soft: #55627a;
+  --line: #cfd8e6;
+  --surface: #f9fbfd;
+  --pen: #c8372d;
+  --pen-soft: rgba(200, 55, 45, .1);
+  --margin-x: 64px;
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="dark"] {
+  --paper: #0f1726;
+  --rule: rgba(160, 190, 240, .06);
+  --ink: #e6ecf6;
+  --ink-soft: #9aa8c0;
+  --line: #29364d;
+  --surface: #162033;
+  --pen: #ec6a5f;
+  --pen-soft: rgba(236, 106, 95, .14);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1726; --rule: rgba(160, 190, 240, .06); --ink: #e6ecf6; --ink-soft: #9aa8c0;
+    --line: #29364d; --surface: #162033; --pen: #ec6a5f; --pen-soft: rgba(236, 106, 95, .14);
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font: 16px/1.5 var(--sans);
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+/* the red margin line of exam paper */
+body::before {
+  content: "";
+  position: fixed; top: 0; bottom: 0; left: var(--margin-x);
+  width: 2px; background: var(--pen); opacity: .55; pointer-events: none;
+}
+main { max-width: 920px; margin: 0 auto; padding: 56px 20px 80px calc(var(--margin-x) + 28px); }
+@media (min-width: 1100px) { main { margin-left: calc(var(--margin-x) + 28px); padding-left: 0; } }
+@media (max-width: 640px) {
+  :root { --margin-x: 14px; }
+  main { padding: 28px 16px 64px 30px; }
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; border-radius: 4px; }
+
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 28px; color: var(--ink-soft); font-size: 14px; }
+.topbar button { font: inherit; color: inherit; background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+
+h1 { font: 400 clamp(40px, 7vw, 68px)/1.02 var(--serif); letter-spacing: -.01em; margin: 0 0 12px; max-width: 14ch; }
+.lede { margin: 0 0 32px; color: var(--ink-soft); max-width: 52ch; }
+
+/* search */
+.searchbox { display: flex; gap: 8px; align-items: stretch; }
+.field {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1.5px solid var(--ink); border-radius: 10px; padding: 0 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.field:focus-within { border-color: var(--pen); box-shadow: 3px 3px 0 var(--pen); }
+.field svg { flex: none; color: var(--ink-soft); }
+.field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: 500 18px/1 var(--sans); padding: 18px 0; }
+.field input::placeholder { color: var(--ink-soft); font-weight: 400; }
+.field .clear { border: 0; background: none; color: var(--ink-soft); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px; display: none; }
+.field.has-text .clear { display: block; }
+.ask {
+  flex: none; font: 600 15px var(--sans); color: var(--surface); background: var(--ink);
+  border: 1.5px solid var(--ink); border-radius: 10px; padding: 0 18px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.ask:disabled { opacity: .5; cursor: wait; }
+.ask[hidden] { display: none; }
+@media (max-width: 520px) { .ask span { display: none; } .ask { padding: 0 14px; } }
+
+.examples { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 14px; color: var(--ink-soft); align-items: center; }
+.examples button { font: inherit; color: var(--ink); background: transparent; border: 1px dashed var(--ink-soft); border-radius: 999px; padding: 3px 12px; cursor: pointer; }
+.examples button:hover { border-style: solid; background: var(--pen-soft); }
+
+/* filters */
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 26px 0 0; }
+.filters label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
+.filters select {
+  width: 100%; font: 500 15px var(--sans); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; appearance: auto; text-overflow: ellipsis;
+}
+.filters select.on { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--pen); }
+
+/* AI understanding bar */
+.understood { margin: 18px 0 0; padding: 12px 14px; border-left: 3px solid var(--pen); background: var(--pen-soft); border-radius: 0 8px 8px 0; font-size: 15px; display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; }
+.understood[hidden] { display: none; }
+.understood p { margin: 0; }
+.understood b { font-weight: 600; }
+.understood button { flex: none; font: inherit; font-size: 14px; background: none; border: 0; color: var(--ink); text-decoration: underline; cursor: pointer; padding: 0; }
+.notice { margin: 14px 0 0; font-size: 14px; color: var(--ink-soft); }
+
+/* results */
+.status { margin: 36px 0 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.status h2 { margin: 0; font: 400 28px/1.1 var(--serif); }
+.status span { color: var(--ink-soft); font-size: 14px; }
+.reset { font: inherit; font-size: 14px; background: none; border: 0; color: var(--ink); text-decoration: underline; cursor: pointer; padding: 0; }
+
+ul.results { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: 112px 1fr auto; gap: 8px 18px; align-items: center; padding: 16px 0; border-top: 1px solid var(--line); }
+.row:last-child { border-bottom: 1px solid var(--line); }
+.code { font: 600 13px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: .02em; border: 1.5px solid var(--ink); border-radius: 4px; padding: 7px 8px; text-align: center; transform: rotate(-1.5deg); background: var(--surface); word-break: break-all; }
+.row h3 { margin: 0; font: 600 17px/1.3 var(--sans); }
+.meta { margin: 3px 0 0; color: var(--ink-soft); font-size: 14px; }
+.papers { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.paper { font: 600 14px var(--sans); text-decoration: none; padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--ink); white-space: nowrap; background: transparent; color: var(--ink); }
+.paper.end { background: var(--ink); color: var(--surface); }
+.paper:hover { border-color: var(--pen); box-shadow: 2px 2px 0 var(--pen); }
+@media (max-width: 700px) {
+  .row { grid-template-columns: 92px 1fr; }
+  .papers { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+.empty { padding: 36px 0; }
+.empty h3 { font: 400 26px var(--serif); margin: 0 0 8px; }
+.empty p { margin: 0 0 10px; color: var(--ink-soft); max-width: 50ch; }
+.empty button { font: inherit; border: 1px solid var(--ink); background: transparent; color: var(--ink); border-radius: 999px; padding: 4px 12px; margin: 0 8px 8px 0; cursor: pointer; }
+.more { display: block; margin: 28px auto 0; font: 600 15px var(--sans); color: var(--ink); background: transparent; border: 1.5px solid var(--ink); border-radius: 10px; padding: 12px 26px; cursor: pointer; }
+.skeleton { height: 62px; margin: 10px 0; border-radius: 8px; background: linear-gradient(90deg, var(--line), transparent, var(--line)); background-size: 200% 100%; opacity: .5; animation: sk 1.2s linear infinite; }
+@keyframes sk { to { background-position: -200% 0; } }
+footer { margin-top: 56px; color: var(--ink-soft); font-size: 13px; max-width: 60ch; }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar">
+    <span>NIT Jalandhar &middot; paper archive</span>
+    <button id="theme" type="button" aria-label="Switch light or dark theme">Theme</button>
+  </div>
+
+  <h1>Find the paper you need.</h1>
+  <p class="lede" id="lede">Mid-sem and end-sem question papers, searchable by subject, code, branch and session.</p>
+
+  <form class="searchbox" id="form" role="search" autocomplete="off">
+    <label class="field" id="field">
+      <span class="sr">Search papers</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" placeholder="Subject name or code, like Data Structures or CSPC0101" autofocus>
+      <button class="clear" id="clear" type="button" aria-label="Clear search">&times;</button>
+    </label>
+    <button class="ask" id="ask" type="button" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2zm7 13l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9L19 15z"/></svg>
+      <span>Ask AI</span>
+    </button>
+  </form>
+
+  <ul class="examples" id="examples" hidden>
+    <li>Try asking:</li>
+    <li><button type="button">dsa end sem cse</button></li>
+    <li><button type="button">first year physics mid sem 2025</button></li>
+    <li><button type="button">dbms papers for it students</button></li>
+  </ul>
+
+  <div class="understood" id="understood" hidden role="status">
+    <p id="understoodText"></p>
+    <button type="button" id="undoAi">Clear</button>
+  </div>
+  <p class="notice" id="notice" hidden></p>
+
+  <section class="filters" aria-label="Filters">
+    <div><label for="f-exam">Exam</label><select id="f-exam"></select></div>
+    <div><label for="f-session">Session</label><select id="f-session"></select></div>
+    <div><label for="f-course">Programme</label><select id="f-course"></select></div>
+    <div><label for="f-batch">Batch</label><select id="f-batch"></select></div>
+    <div><label for="f-dept">Department</label><select id="f-dept"></select></div>
+  </section>
+
+  <div class="status" aria-live="polite">
+    <h2 id="heading">Latest papers</h2>
+    <span><span id="count"></span> <button class="reset" id="reset" type="button" hidden>Reset all</button></span>
+  </div>
+  <ul class="results" id="results"></ul>
+  <button class="more" id="more" type="button" hidden>Show more</button>
+
+  <footer>Papers open from the official NITJ academic repository. If a link is dead, the college server may be down or the file was moved.</footer>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    q: $("q"), field: $("field"), clear: $("clear"), ask: $("ask"), form: $("form"),
+    examples: $("examples"), understood: $("understood"), understoodText: $("understoodText"),
+    notice: $("notice"), results: $("results"), more: $("more"), heading: $("heading"),
+    count: $("count"), reset: $("reset"), lede: $("lede")
+  };
+  const FILTERS = { exam: "f-exam", session: "f-session", course: "f-course", batch: "f-batch", dept: "f-dept" };
+  const LABELS = { exam: "All exams", session: "All sessions", course: "All programmes", batch: "All batches", dept: "All departments" };
+
+  const state = { page: 0, aiQueries: null, controller: null, timer: null, total: 0 };
+
+  /* ---------- helpers ---------- */
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const SMALL = new Set(["and", "of", "the", "in", "for"]);
+  const nice = (s) => s.toLowerCase().split(" ").map((w, i) => (i && SMALL.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    .replace(/\bB\.tech\b/i, "B.Tech").replace(/\bVlsi\b/g, "VLSI").replace(/\bIt\b/g, "IT");
+  const fmt = (n) => n.toLocaleString("en-IN");
+
+  const getFilters = () => {
+    const f = {};
+    for (const [k, id] of Object.entries(FILTERS)) { const v = $(id).value; if (v) f[k] = v; }
+    return f;
+  };
+  const markFilters = () => { for (const id of Object.values(FILTERS)) $(id).classList.toggle("on", !!$(id).value); };
+
+  /* ---------- theme ---------- */
+  const root = document.documentElement;
+  const saved = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
+  if (saved) root.dataset.theme = saved;
+  $("theme").addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch {}
+  });
+
+  /* ---------- meta ---------- */
+  async function loadMeta() {
+    const m = await (await fetch("/api/meta")).json();
+    const fill = (key, items, label) => {
+      const sel = $(FILTERS[key]);
+      sel.innerHTML = `<option value="">${LABELS[key]}</option>` + items.map((x) =>
+        `<option value="${esc(x.value)}">${esc(label ? label(x.value) : x.value)}</option>`).join("");
+    };
+    fill("exam", m.exams);
+    fill("session", m.sessions);
+    fill("course", m.courses);
+    fill("batch", m.batches);
+    fill("dept", m.departments, nice);
+    const first = m.sessions[m.sessions.length - 1], last = m.sessions[0];
+    els.lede.textContent = `${fmt(m.total)} mid-sem and end-sem papers from ${first.value} to ${last.value}, searchable by subject, code, branch and session.`;
+    if (m.ai) { els.ask.hidden = false; els.examples.hidden = false; }
+    els.q.placeholder = m.ai ? "Search, or ask in plain words: dsa end sem cse" : els.q.placeholder;
+  }
+
+  /* ---------- search ---------- */
+  function buildParams(page) {
+    const p = new URLSearchParams();
+    const queries = state.aiQueries ? state.aiQueries : (els.q.value.trim() ? [els.q.value.trim()] : []);
+    queries.forEach((q) => p.append("q", q));
+    for (const [k, v] of Object.entries(getFilters())) p.set(k, v);
+    p.set("page", page);
+    return p;
+  }
+
+  function rowHTML(g) {
+    const papers = g.papers.map((p, i) => {
+      const dup = g.papers.filter((x) => x.exam === p.exam).length > 1;
+      const n = dup ? ` ${g.papers.filter((x, j) => x.exam === p.exam && j <= i).length}` : "";
+      return `<a class="paper ${p.exam === "End Sem" ? "end" : ""}" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.exam)}${n}</a>`;
+    }).join("");
+    const meta = [g.course, g.dept === "Not specified" ? null : nice(g.dept), "Batch " + g.batch, g.session].filter(Boolean).map(esc).join(" · ");
+    return `<li class="row"><div class="code">${esc(g.code)}</div><div><h3>${esc(g.name)}</h3><p class="meta">${meta}</p></div><div class="papers">${papers}</div></li>`;
+  }
+
+  function showSkeleton() {
+    els.results.innerHTML = '<li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>';
+  }
+
+  async function search(page = 0) {
+    if (state.controller) state.controller.abort();
+    state.controller = new AbortController();
+    markFilters();
+    if (page === 0) showSkeleton();
+    try {
+      const res = await fetch("/api/search?" + buildParams(page), { signal: state.controller.signal });
+      const d = await res.json();
+      state.page = page;
+      if (page === 0) els.results.innerHTML = "";
+      els.results.insertAdjacentHTML("beforeend", d.groups.map(rowHTML).join(""));
+      els.more.hidden = !d.has_more;
+
+      const searching = !!(state.aiQueries || els.q.value.trim());
+      const filtered = Object.keys(getFilters()).length > 0;
+      els.heading.textContent = searching ? "Results" : (filtered ? "Filtered papers" : "Latest papers");
+      els.count.textContent = d.total_groups
+        ? `${fmt(d.total_groups)} subjects · ${fmt(d.total_papers)} papers`
+        : "";
+      els.reset.hidden = !(searching || filtered);
+
+      if (!d.total_groups) {
+        const sug = d.suggestions.map((s) => `<button type="button" data-s="${esc(s)}">${esc(s)}</button>`).join("");
+        els.results.innerHTML = `<li class="empty"><h3>No papers found</h3><p>Try fewer words, check the spelling, or remove a filter.${els.ask.hidden ? "" : " You can also press Ask AI to rephrase it for you."}</p>${sug ? "<p>Did you mean:</p>" + sug : ""}</li>`;
+      }
+    } catch (e) {
+      if (e.name === "AbortError") return;
+      els.results.innerHTML = '<li class="empty"><h3>Could not load papers</h3><p>The server may be waking up. Wait a few seconds and search again.</p></li>';
+    }
+  }
+
+  const debounced = () => { clearTimeout(state.timer); state.timer = setTimeout(() => search(0), 220); };
+
+  /* ---------- AI ---------- */
+  async function askAI(text) {
+    text = (text || els.q.value).trim();
+    if (!text) { els.q.focus(); return; }
+    els.q.value = text; els.field.classList.add("has-text");
+    els.ask.disabled = true; els.notice.hidden = true;
+    try {
+      const res = await fetch("/api/ai?q=" + encodeURIComponent(text));
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "AI search failed.");
+      // reset filters, then apply what the AI understood
+      for (const id of Object.values(FILTERS)) $(id).value = "";
+      for (const [k, v] of Object.entries(d.filters || {})) $(FILTERS[k]).value = v;
+      state.aiQueries = (d.queries && d.queries.length) ? d.queries : null;
+      const bits = [];
+      if (state.aiQueries) bits.push("subject: " + state.aiQueries.map((q) => `<b>${esc(q)}</b>`).join(" or "));
+      for (const [k, v] of Object.entries(d.filters || {})) bits.push(`${LABELS[k].replace("All ", "").replace(/s$/, "")}: <b>${esc(k === "dept" ? nice(v) : v)}</b>`);
+      els.understoodText.innerHTML = (d.note ? esc(d.note) + " " : "") + (bits.length ? "Searching " + bits.join(", ") + "." : "");
+      els.understood.hidden = false;
+    } catch (e) {
+      els.notice.textContent = e.message;
+      els.notice.hidden = false;
+      state.aiQueries = null; els.understood.hidden = true;
+    } finally {
+      els.ask.disabled = false;
+    }
+    search(0);
+  }
+
+  function clearAI() { state.aiQueries = null; els.understood.hidden = true; }
+
+  /* ---------- events ---------- */
+  els.q.addEventListener("input", () => {
+    els.field.classList.toggle("has-text", !!els.q.value);
+    clearAI(); els.notice.hidden = true; debounced();
+  });
+  els.form.addEventListener("submit", (e) => { e.preventDefault(); clearTimeout(state.timer); clearAI(); search(0); els.q.blur(); });
+  els.clear.addEventListener("click", () => { els.q.value = ""; els.field.classList.remove("has-text"); clearAI(); els.q.focus(); search(0); });
+  els.ask.addEventListener("click", () => askAI());
+  els.examples.addEventListener("click", (e) => { if (e.target.tagName === "BUTTON") askAI(e.target.textContent); });
+  $("undoAi").addEventListener("click", () => {
+    clearAI(); els.q.value = ""; els.field.classList.remove("has-text");
+    for (const id of Object.values(FILTERS)) $(id).value = "";
+    search(0);
+  });
+  for (const id of Object.values(FILTERS)) $(id).addEventListener("change", () => search(0));
+  els.more.addEventListener("click", () => search(state.page + 1));
+  els.reset.addEventListener("click", () => {
+    els.q.value = ""; els.field.classList.remove("has-text"); clearAI(); els.notice.hidden = true;
+    for (const id of Object.values(FILTERS)) $(id).value = "";
+    search(0);
+  });
+  els.results.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-s]");
+    if (b) { els.q.value = b.dataset.s; els.field.classList.add("has-text"); search(0); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== els.q && !/SELECT|INPUT/.test(document.activeElement.tagName)) { e.preventDefault(); els.q.focus(); }
+  });
+
+  loadMeta().then(() => search(0)).catch(() => search(0));
+})();
+</script>
+</body>
+</html>
